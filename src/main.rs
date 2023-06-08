@@ -25,6 +25,7 @@ impl PluginGroup for OtherPlugins {
             .add(EditorPlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100f32))
             .add(RapierDebugRenderPlugin::default())
+            .add(ExitPlugin::default())
     }
 }
 
@@ -98,20 +99,19 @@ fn exit_system(
         *count = 0
     }
 
-    if *count >= keys.press_count {
-        exit.send(AppExit);
-    }
-
-    for key in keys.keys.iter() {
+    keys.keys.iter().for_each(|key: &KeyCode| {
         if !keyboard.pressed(*key) {
             return;
         }
-    }
+    });
 
-    for key in keys.keys.iter() {
+    keys.keys.iter().for_each(|key: &KeyCode| {
         if keyboard.just_pressed(*key) {
             *count += 1;
-            return;
+            if *count >= keys.press_count {
+                exit.send(AppExit);
+            }
+            return
         }
-    }
+    });
 }
