@@ -47,6 +47,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(GamePlugins)
+        .add_plugins(OtherPlugins)
         .run();
 }
 
@@ -61,7 +62,7 @@ impl Default for ExitPlugin {
         Self {
             keys: vec![KeyCode::LControl, KeyCode::L],
             reset_timer_duration: Duration::from_secs_f32(0.5f32),
-            press_count: 1usize,
+            press_count: 1,
         }
     }
 }
@@ -99,19 +100,19 @@ fn exit_system(
         *count = 0
     }
 
-    keys.keys.iter().for_each(|key: &KeyCode| {
+    for key in keys.keys.iter() {
         if !keyboard.pressed(*key) {
-            return;
+            return
         }
-    });
+    }
 
-    keys.keys.iter().for_each(|key: &KeyCode| {
+    keys.keys.iter().for_each(|key| {
         if keyboard.just_pressed(*key) {
             *count += 1;
             if *count >= keys.press_count {
                 exit.send(AppExit);
             }
-            return
+            return 
         }
     });
 }
