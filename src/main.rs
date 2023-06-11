@@ -8,11 +8,18 @@ use bevy_rapier2d::prelude::*;
 use seldom_state::StateMachinePlugin;
 use std::time::Duration;
 
+pub mod camera;
+pub mod level;
+pub mod player;
+
 struct GamePlugins;
 
 impl PluginGroup for GamePlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
+            .add(camera::CameraPlugin)
+            .add(level::LevelPlugin)
+            .add(player::PlayerPlugin)
     }
 }
 
