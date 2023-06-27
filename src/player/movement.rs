@@ -11,7 +11,7 @@ impl Plugin for PlayerMovementPlugin {
 }
 
 pub fn init(mut cmd: Commands, player_query: Query<(Entity, &Sprite), With<Player>>) {
-    let (entity, sprite) = player_query.get_single().unwrap();
+    let (entity, sprite) = player_query.single();
     let size = sprite.custom_size.unwrap_or(Vec2::new(50f32, 50f32)) / 2f32;
 
     cmd.entity(entity).insert((

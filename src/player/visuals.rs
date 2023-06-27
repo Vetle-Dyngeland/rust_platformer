@@ -1,5 +1,5 @@
 use super::Player;
-use bevy::prelude::*;
+use bevy::{prelude::*, render::texture::DEFAULT_IMAGE_HANDLE};
 
 pub(super) struct PlayerVisualsPlugin;
 
@@ -10,13 +10,12 @@ impl Plugin for PlayerVisualsPlugin {
 }
 
 pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
-    cmd.entity(match player_query.get_single() {
-        Ok(entity) => entity,
-        Err(err) => panic!("{}", err.to_string()),
-    })
-    .insert(Sprite {
-        custom_size: Some((25f32, 25f32).into()),
-        color: Color::rgb_u8(125, 205, 255),
-        ..Default::default()
-    });
+    cmd.entity(player_query.single()).insert((
+        Sprite {
+            custom_size: Some((25f32, 25f32).into()),
+            color: Color::rgb_u8(125, 205, 255),
+            ..Default::default()
+        },
+        Handle::<Image>::from(DEFAULT_IMAGE_HANDLE.typed())
+    ));
 }

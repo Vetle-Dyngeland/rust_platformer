@@ -10,5 +10,5 @@ impl Plugin for PlayerStateMachinePlugin {
 }
 
 pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
-
+    cmd.entity(player_query.single()).insert(());
 }
