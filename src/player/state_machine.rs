@@ -4,6 +4,7 @@ use bevy::prelude::*;
 pub mod triggers;
 use seldom_state::prelude::*;
 use triggers::*;
+use states::*;
 
 pub(super) struct PlayerStateMachinePlugin;
 
@@ -40,18 +41,22 @@ pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
     ));
 }
 
-#[derive(Clone, Copy, Component, Reflect)]
-#[component(storage = "SparseSet")]
-enum GroundedState {
-    WalkingLeft = -1,
-    Idle = 0,
-    WalkingRight = 1,
+pub mod states {
+    use bevy::prelude::*;
+
+    #[derive(Clone, Copy, Component, Reflect)]
+    #[component(storage = "SparseSet")]
+    pub enum GroundedState {
+        WalkingLeft = -1,
+        Idle = 0,
+        WalkingRight = 1,
+    }
+
+    #[derive(Clone, Copy, Component, Reflect)]
+    #[component(storage = "SparseSet")]
+    pub struct JumpingState;
+
+    #[derive(Clone, Copy, Component, Reflect)]
+    #[component(storage = "SparseSet")]
+    pub struct FallingState;
 }
-
-#[derive(Clone, Copy, Component, Reflect)]
-#[component(storage = "SparseSet")]
-struct JumpingState;
-
-#[derive(Clone, Copy, Component, Reflect)]
-#[component(storage = "SparseSet")]
-struct FallingState;
