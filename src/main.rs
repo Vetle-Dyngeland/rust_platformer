@@ -41,9 +41,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Bevy Platformer".to_string(),
-                        resolution: (1920f32, 1080f32).into(),
                         mode: WindowMode::BorderlessFullscreen,
-                        resizable: false,
                         ..Default::default()
                     }),
                     ..Default::default()
