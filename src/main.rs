@@ -1,14 +1,13 @@
 use bevy::{
     app::{AppExit, PluginGroupBuilder},
     prelude::*,
-    window::{PresentMode, WindowMode},
+    window::WindowMode,
 };
 use bevy_editor_pls::EditorPlugin;
 use bevy_rapier2d::prelude::*;
 use seldom_state::StateMachinePlugin;
 use std::time::Duration;
 
-pub mod camera;
 pub mod level;
 pub mod player;
 
@@ -17,7 +16,6 @@ struct GamePlugins;
 impl PluginGroup for GamePlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(camera::CameraPlugin)
             .add(level::LevelPlugin)
             .add(player::PlayerPlugin)
     }
@@ -45,7 +43,6 @@ fn main() {
                         title: "Bevy Platformer".to_string(),
                         resolution: (1920f32, 1080f32).into(),
                         mode: WindowMode::BorderlessFullscreen,
-                        present_mode: PresentMode::AutoNoVsync,
                         resizable: false,
                         ..Default::default()
                     }),
@@ -54,6 +51,10 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(GamePlugins)
+        .insert_resource(RapierConfiguration {
+            gravity: Vec2::new(0f32, -500f32),
+            ..Default::default()
+        })
         .add_plugins(OtherPlugins)
         .run();
 }
@@ -109,7 +110,7 @@ fn exit_system(
 
     for key in keys.keys.iter() {
         if !keyboard.pressed(*key) {
-            return
+            return;
         }
     }
 
@@ -119,7 +120,7 @@ fn exit_system(
             if *count >= keys.press_count {
                 exit.send(AppExit);
             }
-            return 
+            return;
         }
     });
 }

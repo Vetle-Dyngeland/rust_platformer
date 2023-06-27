@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-pub(super) struct CameraPlugin;
+pub(super) struct PlayerCameraPlugin;
 
-impl Plugin for CameraPlugin {
+impl Plugin for PlayerCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(init); 
     }

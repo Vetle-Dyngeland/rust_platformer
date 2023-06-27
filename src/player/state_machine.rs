@@ -1,18 +1,14 @@
+use super::Player;
 use bevy::prelude::*;
-use leafwing_input_manager::prelude::*;
-use seldom_state::prelude::*;
-use super::{Player, input::InputAction};
 
 pub(super) struct PlayerStateMachinePlugin;
 
 impl Plugin for PlayerStateMachinePlugin {
     fn build(&self, app: &mut App) {
-        
+        app.add_startup_system(init.in_base_set(StartupSet::Startup));
     }
 }
 
-impl Player {
-    pub fn init_state_machine(cmd: &mut Commands, player: Entity) {
+pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
 
-    }
 }

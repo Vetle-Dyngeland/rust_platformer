@@ -1,28 +1,14 @@
 use super::Player;
 use bevy::prelude::*;
-use leafwing_input_manager::prelude::*;
 
 pub(super) struct PlayerInputPlugin;
 
 impl Plugin for PlayerInputPlugin {
-    fn build(&self, _app: &mut App) {
-
+    fn build(&self, app: &mut App) {
+        app.add_startup_system(init.in_base_set(StartupSet::Startup));
     }
 }
 
-impl Player {
-    pub fn init_input(cmd: &mut Commands, player: Entity) {
-        cmd.entity(player)
-            .insert(InputManagerBundle::<InputAction> {
-                input_map: InputMap::new([(KeyCode::Up, InputAction::Jump)]),
-                ..Default::default()
-            }
-        );
-    }
-}
+pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
 
-#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
-pub enum InputAction {
-    Move,
-    Jump,
 }
