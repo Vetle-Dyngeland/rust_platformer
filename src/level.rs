@@ -21,6 +21,10 @@ fn init(mut cmd: Commands) {
             ..Default::default()
         },
         Collider::cuboid(250f32, 5f32),
+        Ground,
         Name::from("Platform"),
     ));
 }
+
+#[derive(Component)]
+pub struct Ground;
