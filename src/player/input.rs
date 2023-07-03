@@ -1,4 +1,4 @@
-use super::Player;
+use super::{Player, PlayerStartupSet};
 use bevy::prelude::*;
 use leafwing_input_manager::{prelude::*, axislike::VirtualAxis};
 
@@ -7,7 +7,7 @@ pub(super) struct PlayerInputPlugin;
 impl Plugin for PlayerInputPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(InputManagerPlugin::<InputAction>::default())
-            .add_startup_system(init.in_base_set(StartupSet::Startup));
+            .add_startup_system(init.in_set(PlayerStartupSet::Input));
     }
 }
 

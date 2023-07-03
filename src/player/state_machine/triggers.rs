@@ -8,7 +8,7 @@ use seldom_state::prelude::*;
 use std::any::type_name;
 
 use crate::player::{
-    movement::{Surface, SurfaceGroundedChecker},
+    movement::{sub_components::Surface, CharacterController},
     Player,
 };
 
@@ -16,10 +16,10 @@ use crate::player::{
 pub struct GroundedTrigger;
 
 impl BoolTrigger for GroundedTrigger {
-    type Param<'w, 's> = Query<'w, 's, &'static SurfaceGroundedChecker, With<Player>>;
+    type Param<'w, 's> = Query<'w, 's, &'static CharacterController, With<Player>>;
 
     fn trigger(&self, _: Entity, param: Self::Param<'_, '_>) -> bool {
-        param.single().surface_touching_ground(&Surface::Bottom)
+        param.single().surface_checker.surface_touching_ground(&Surface::Bottom)
     }
 }
 

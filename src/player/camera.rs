@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
+use super::PlayerStartupSet;
+
 pub(super) struct PlayerCameraPlugin;
 
 impl Plugin for PlayerCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(init); 
+        app.add_startup_system(init.in_set(PlayerStartupSet::Camera)); 
     }
 }
 

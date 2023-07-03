@@ -25,11 +25,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(ConfigurePlayerSetsPlugin)
             .add_plugins(PlayerPlugins)
-            .add_startup_systems(
-                (init, apply_system_buffers)
-                    .chain()
-                    .in_base_set(StartupSet::PreStartup),
-            );
+            .add_startup_system(init.in_set(PlayerStartupSet::Main));
     }
 }
 
@@ -56,6 +52,17 @@ pub enum PlayerSet {
     PostPlayer,
 }
 
+#[derive(SystemSet, Clone, Copy, PartialEq, Debug, Hash, Eq)]
+pub enum PlayerStartupSet {
+    PrePlayer,
+    Main,
+    Input,
+    StateMachine,
+    Movement,
+    Camera,
+    Visuals,
+    PostPlayer,
+}
 struct ConfigurePlayerSetsPlugin;
 
 impl Plugin for ConfigurePlayerSetsPlugin {
@@ -66,12 +73,52 @@ impl Plugin for ConfigurePlayerSetsPlugin {
                 PlayerSet::Main,
                 PlayerSet::Input,
                 PlayerSet::StateMachine,
-                PlayerSet::Movement,
                 PlayerSet::Camera,
                 PlayerSet::Visuals,
+                PlayerSet::Movement,
                 PlayerSet::PostPlayer,
             )
                 .chain(),
-        );
+        )
+        .add_systems((
+            apply_system_buffers.after(PlayerSet::PrePlayer).before(PlayerSet::Main),
+            apply_system_buffers.after(PlayerSet::Main).before(PlayerSet::Input),
+            apply_system_buffers.after(PlayerSet::Input).before(PlayerSet::StateMachine),
+            apply_system_buffers.after(PlayerSet::StateMachine).before(PlayerSet::Camera),
+            apply_system_buffers.after(PlayerSet::Camera).before(PlayerSet::Visuals),
+            apply_system_buffers.after(PlayerSet::Visuals).before(PlayerSet::Movement),
+            apply_system_buffers.after(PlayerSet::Movement).before(PlayerSet::PostPlayer),
+            apply_system_buffers.after(PlayerSet::PostPlayer),
+        ));
+
+        let startup = match app.get_schedule_mut(CoreSchedule::Startup) {
+            Some(schedule) => schedule,
+            None => panic!("Error gettings startup schedule!"),
+        };
+
+        startup
+            .configure_sets(
+                (
+                    PlayerStartupSet::PrePlayer,
+                    PlayerStartupSet::Main,
+                    PlayerStartupSet::Input,
+                    PlayerStartupSet::StateMachine,
+                    PlayerStartupSet::Camera,
+                    PlayerStartupSet::Visuals,
+                    PlayerStartupSet::Movement,
+                    PlayerStartupSet::PostPlayer,
+                )
+                    .chain(),
+            )
+        .add_systems((
+            apply_system_buffers.after(PlayerStartupSet::PrePlayer).before(PlayerStartupSet::Main),
+            apply_system_buffers.after(PlayerStartupSet::Main).before(PlayerStartupSet::Input),
+            apply_system_buffers.after(PlayerStartupSet::Input).before(PlayerStartupSet::StateMachine),
+            apply_system_buffers.after(PlayerStartupSet::StateMachine).before(PlayerStartupSet::Camera),
+            apply_system_buffers.after(PlayerStartupSet::Camera).before(PlayerStartupSet::Visuals),
+            apply_system_buffers.after(PlayerStartupSet::Visuals).before(PlayerStartupSet::Movement),
+            apply_system_buffers.after(PlayerStartupSet::Movement).before(PlayerStartupSet::PostPlayer),
+            apply_system_buffers.after(PlayerStartupSet::PostPlayer),
+        ));
     }
 }

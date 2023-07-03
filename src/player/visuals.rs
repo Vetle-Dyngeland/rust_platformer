@@ -1,11 +1,11 @@
-use super::Player;
+use super::{Player, PlayerStartupSet};
 use bevy::{prelude::*, render::texture::DEFAULT_IMAGE_HANDLE};
 
 pub(super) struct PlayerVisualsPlugin;
 
 impl Plugin for PlayerVisualsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(init.in_base_set(StartupSet::Startup));
+        app.add_startup_system(init.in_set(PlayerStartupSet::Visuals));
     }
 }
 

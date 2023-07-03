@@ -29,7 +29,6 @@ impl PluginGroup for OtherPlugins {
             .add(StateMachinePlugin::default())
             .add(EditorPlugin::default())
             .add(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100f32))
-            .add(RapierDebugRenderPlugin::default())
             .add(ExitPlugin::default())
     }
 }
