@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{
     level::Ground,
-    player::{movement::CharacterController, Player, PlayerSet},
+    player::{movement::CharacterController, Player, PlayerSet, PlayerStartupSet},
 };
 
 const DEBUG_SURFACE_CHECKER_ENABLED: bool = true;
@@ -15,7 +15,7 @@ impl Plugin for MovementSubComponentsPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(
             add_debug_sprites
-                .in_set(PlayerSet::PostPlayer)
+                .in_set(PlayerStartupSet::PostPlayer)
                 .run_if(debug_surface_checker_enabled),
         )
         .add_system(
@@ -23,7 +23,9 @@ impl Plugin for MovementSubComponentsPlugin {
                 .in_set(PlayerSet::Visuals)
                 .run_if(debug_surface_checker_enabled),
         )
-        .add_system(surface_checker.in_set(PlayerSet::PrePlayer));
+        .add_system(surface_checker.in_set(PlayerSet::PrePlayer))
+        .register_type::<Surface>()
+        .register_type::<SurfaceGroundedChecker>();
     }
 }
 
@@ -33,13 +35,13 @@ const fn debug_surface_checker_enabled() -> bool {
 
 fn add_debug_sprites(
     mut cmd: Commands,
-    player: Query<(Entity, &CharacterController), With<Player>>,
+    player_query: Query<(Entity, &CharacterController), With<Player>>,
 ) {
-    let (entity, controller) = match player.get_single() {
+    let (entity, controller) = match player_query.get_single() {
         Ok((e, c)) => (e, c),
         Err(err) => {
             println!(
-                "\n\n\nCould not get player entity. Error provided: {}",/-
+                "\n\n\nCould not get player entity. Error provided: {}",
                 err.to_string()
             );
             return;
@@ -51,8 +53,12 @@ fn add_debug_sprites(
             SpriteBundle {
                 sprite: Sprite {
                     custom_size: Some(match surface {
-                        Surface::Top | Surface::Bottom => Vec2::new(controller.size.x, 10f32),
-                        Surface::Left | Surface::Right => Vec2::new(10f32, controller.size.y),
+                        Surface::Top | Surface::Bottom => {
+                            Vec2::new(controller.size.x / 1.1f32, 2.5f32)
+                        }
+                        Surface::Left | Surface::Right => {
+                            Vec2::new(2.5f32, controller.size.y / 1.1f32)
+                        }
                     }),
                     color: Color::WHITE,
                     ..Default::default()
@@ -63,7 +69,7 @@ fn add_debug_sprites(
                         Surface::Bottom => Vec3::NEG_Y * controller.size.y / 2f32,
                         Surface::Right => Vec3::X * controller.size.x / 2f32,
                         Surface::Left => Vec3::NEG_X * controller.size.x / 2f32,
-                    },
+                    } + Vec3::Z * 5f32,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -78,7 +84,7 @@ fn add_debug_sprites(
         generate_child(Surface::Top),
         generate_child(Surface::Bottom),
         generate_child(Surface::Left),
-        generate_child(Surface::Top),
+        generate_child(Surface::Right),
     ];
 
     cmd.entity(entity).push_children(&children);
@@ -109,7 +115,8 @@ fn debug_surface_checker(
                 _ => Color::RED,
             },
             None => {
-                panic!("Surface checker did not contain surface: {:?}", surface.0);
+                println!("Surface checker did not contain surface: {:?}", surface.0);
+                return;
             }
         };
 
@@ -158,7 +165,7 @@ fn surface_checker(
     ctx: Res<RapierContext>,
 ) {
     for (mut controller, transform) in grounded_checker_query.iter_mut() {
-        let (pos, size) = (transform.translation, controller.size);
+        let (pos, size) = (transform.translation, controller.size / 1.1f32);
 
         let shapes: Vec<(Aabb, Surface)> = [
             (Vec2::NEG_Y, Surface::Bottom),

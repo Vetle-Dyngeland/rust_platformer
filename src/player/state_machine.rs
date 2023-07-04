@@ -3,8 +3,8 @@ use bevy::prelude::*;
 
 pub mod triggers;
 use seldom_state::prelude::*;
-use triggers::*;
 use states::*;
+use triggers::*;
 
 pub(super) struct PlayerStateMachinePlugin;
 
@@ -18,11 +18,10 @@ pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
     cmd.entity(player_query.single()).insert((
         GroundedState::Idle,
         StateMachine::default()
+            .trans::<JumpingState>(AlwaysTrigger, FallingState)
             .trans::<FallingState>(GroundedTrigger, GroundedState::Idle)
-            .trans::<FallingState>(FallingTrigger.not(), JumpingState)
-            .trans::<JumpingState>(GroundedTrigger, GroundedState::Idle)
-            .trans::<JumpingState>(FallingTrigger, FallingState)
-            .trans::<GroundedState>(JustPressedTrigger(InputAction::Jump), JumpingState)
+            .trans::<FallingState>(JumpTrigger, JumpingState)
+            .trans::<GroundedState>(JumpTrigger, JumpingState)
             .trans::<GroundedState>(GroundedTrigger.not().and(FallingTrigger), FallingState)
             .trans_builder(
                 ValueTrigger::unbounded(InputAction::Run),

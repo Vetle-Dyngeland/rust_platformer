@@ -13,13 +13,44 @@ use crate::player::{
 };
 
 #[derive(Debug)]
+pub struct JumpTrigger;
+
+impl BoolTrigger for JumpTrigger {
+    type Param<'w, 's> = Query<'w, 's, &'static CharacterController, With<Player>>;
+
+    fn trigger(&self, _: Entity, param: Self::Param<'_, '_>) -> bool {
+        match param.get_single() {
+            Ok(val) => {
+                !val.coyote_timer.finished()
+                    && !val.jump_buffer_timer.finished()
+            }
+            Err(message) => {
+                println!(
+                    "Could not get controller and velocity in jump trigger. Error message: {}",
+                    message.to_string()
+                );
+                false
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct GroundedTrigger;
 
 impl BoolTrigger for GroundedTrigger {
     type Param<'w, 's> = Query<'w, 's, &'static CharacterController, With<Player>>;
 
     fn trigger(&self, _: Entity, param: Self::Param<'_, '_>) -> bool {
-        param.single().surface_checker.surface_touching_ground(&Surface::Bottom)
+        match param.get_single() {
+            Ok(val) => val
+                .surface_checker
+                .surface_touching_ground(&Surface::Bottom),
+            Err(message) => {
+                println!("Could not get player character controller in grounded trigger. Error message: {}", message.to_string());
+                false
+            }
+        }
     }
 }
 
@@ -27,10 +58,18 @@ impl BoolTrigger for GroundedTrigger {
 pub struct FallingTrigger;
 
 impl BoolTrigger for FallingTrigger {
-    type Param<'w, 's> = Query<'w, 's, &'static Velocity, With<Player>>;
+    type Param<'w, 's> = Query<'w, 's, &'static CharacterController, With<Player>>;
 
     fn trigger(&self, _: Entity, param: Self::Param<'_, '_>) -> bool {
-        param.single().linvel.y < 0f32
+        match param.get_single() {
+            Ok(val) => !val
+                .surface_checker
+                .surface_touching_ground(&Surface::Bottom),
+            Err(message) => {
+                println!("Could not get player character controller in falling trigger. Error message: {}", message.to_string());
+                false
+            }
+        }
     }
 }
 
