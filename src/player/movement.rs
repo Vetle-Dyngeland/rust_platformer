@@ -160,7 +160,7 @@ fn jump(
     controller
         .coyote_timer
         .tick(Duration::from_secs_f32(1000f32));
-    vel.linvel.y += controller.jump_force * time.delta_seconds();
+    vel.linvel.y = controller.jump_force * time.delta_seconds();
 
     println!("Jumped!")
 }
