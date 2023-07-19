@@ -20,8 +20,8 @@ pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
         StateMachine::default()
             .trans::<JumpingState>(AlwaysTrigger, FallingState)
             .trans::<FallingState>(GroundedTrigger, GroundedState::Idle)
-            .trans::<FallingState>(JumpTrigger, JumpingState)
-            .trans::<GroundedState>(JumpTrigger, JumpingState)
+            .trans::<FallingState>(JumpTrigger, JumpingState(1f32))
+            .trans::<GroundedState>(JumpTrigger, JumpingState(1f32))
             .trans::<GroundedState>(GroundedTrigger.not().and(FallingTrigger), FallingState)
             .trans_builder(
                 ValueTrigger::unbounded(InputAction::Run),
@@ -49,7 +49,7 @@ pub mod states {
 
     #[derive(Clone, Copy, Component, Reflect)]
     #[component(storage = "SparseSet")]
-    pub struct JumpingState;
+    pub struct JumpingState(pub f32);
 
     #[derive(Clone, Copy, Component, Reflect)]
     #[component(storage = "SparseSet")]

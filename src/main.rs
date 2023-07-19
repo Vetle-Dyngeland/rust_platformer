@@ -48,7 +48,7 @@ fn main() {
             OtherPlugins,
         ))
         .insert_resource(RapierConfiguration {
-            gravity: Vec2::new(0f32, -500f32),
+            gravity: Vec2::new(0f32, -1100f32),
             ..Default::default()
         })
         .run();

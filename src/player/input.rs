@@ -16,7 +16,7 @@ pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
         .insert(InputManagerBundle {
             action_state: ActionState::default(),
             input_map: InputMap::default()
-                .insert(VirtualAxis::horizontal_arrow_keys(), InputAction::Jump)
+                .insert(VirtualAxis::horizontal_arrow_keys(), InputAction::Run)
                 .insert(KeyCode::C, InputAction::Jump)
                 .build()
         });
