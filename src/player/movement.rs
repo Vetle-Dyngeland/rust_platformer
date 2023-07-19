@@ -22,9 +22,30 @@ impl Plugin for PlayerMovementPlugin {
                     .in_set(PlayerSet::Movement)
                     .chain(),
             )
+            .add_systems(Update, respawn.run_if(should_respawn))
             .add_plugins(sub_components::MovementSubComponentsPlugin)
             .register_type::<CharacterController>();
     }
+}
+
+fn should_respawn(player_query: Query<&Transform, With<Player>>) -> bool {
+    match player_query.get_single() {
+        Ok(transform) => {
+            transform.translation.x.abs() > 100000f32
+                || transform.translation.y < -1000f32
+                || transform.translation.y > 50000f32
+        }
+        _ => false,
+    }
+}
+
+fn respawn(mut player_query: Query<(&mut Transform, &mut Velocity), With<Player>>) {
+    let (mut transform, mut vel) = player_query.single_mut();
+
+    transform.translation = Vec3::ZERO;
+    transform.rotation = Quat::default();
+    vel.linvel = Vec2::ZERO;
+    vel.angvel = 0f32;
 }
 
 fn init(mut cmd: Commands, player_query: Query<(Entity, &Sprite), With<Player>>) {
@@ -52,6 +73,7 @@ fn init(mut cmd: Commands, player_query: Query<(Entity, &Sprite), With<Player>>)
             coyote_time: 0.175f32,
             jump_buffer_time: 0.2f32,
             jump_release_multi: 0.3f32,
+            wall_jump_force: Vec2::new(130f32, 300f32),
 
             max_move_speed: 250f32,
             acceleration_force: 2500f32,
@@ -71,6 +93,7 @@ pub struct CharacterControllerBuilder {
     pub coyote_time: f32,
     pub jump_buffer_time: f32,
     pub jump_release_multi: f32,
+    pub wall_jump_force: Vec2,
 
     pub max_move_speed: f32,
     pub acceleration_force: f32,
@@ -93,6 +116,7 @@ impl CharacterControllerBuilder {
             ),
             has_released_jump: true,
             jump_release_multi: self.jump_release_multi,
+            wall_jump_force: self.wall_jump_force,
 
             max_move_speed: self.max_move_speed,
             acceleration_force: self.acceleration_force,
@@ -113,6 +137,7 @@ pub struct CharacterController {
     pub jump_buffer_timer: Timer,
     pub has_released_jump: bool,
     pub jump_release_multi: f32,
+    pub wall_jump_force: Vec2,
 
     pub max_move_speed: f32,
     pub acceleration_force: f32,
@@ -161,20 +186,18 @@ fn horizontal_movement(
         * turnaround_multi
         * air_control_multi;
 
-    if (vel.linvel.x + add_val).abs() > controller.max_move_speed {
-        vel.linvel.x = controller.max_move_speed * add_val.signum();
+    vel.linvel.x += if (vel.linvel.x + add_val).abs() > controller.max_move_speed {
+        (controller.max_move_speed - vel.linvel.x.abs()).min(-5f32) * add_val.signum()
     } else {
-        vel.linvel.x += add_val;
-    }
+        add_val
+    };
 
     if move_val.abs() > 0f32 && vel.linvel.x > 0f32 || !grounded {
         return;
     }
 
     // Deccelerate
-    let sub_val = controller.decceleration_force
-        * time.delta_seconds()
-        * vel.linvel.x.signum();
+    let sub_val = controller.decceleration_force * time.delta_seconds() * vel.linvel.x.signum();
 
     if (vel.linvel.x - sub_val).signum() != vel.linvel.x.signum() {
         vel.linvel.x = 0f32;
