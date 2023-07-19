@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::primitives::Aabb};
+use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use std::collections::HashMap;
 
@@ -20,7 +20,7 @@ impl Plugin for MovementSubComponentsPlugin {
                 .run_if(debug_surface_checker_enabled),
         )
         .add_systems(
-            Update,
+            Last,
             (
                 debug_surface_checker
                     .in_set(PlayerSet::Visuals)
@@ -164,43 +164,33 @@ pub enum Surface {
 }
 
 fn surface_checker(
-    mut grounded_checker_query: Query<(&mut CharacterController, &Transform)>,
+    mut grounded_checker_query: Query<(Entity, &mut CharacterController, &Transform), With<Player>>,
     ground_query: Query<Entity, (With<Ground>, With<Collider>)>,
     ctx: Res<RapierContext>,
 ) {
-    for (mut controller, transform) in grounded_checker_query.iter_mut() {
-        let (pos, size) = (transform.translation, controller.size / 1.1f32);
+    let (player, mut controller, transform) = grounded_checker_query.single_mut();
 
-        let shapes: Vec<(Aabb, Surface)> = [
-            (Vec2::NEG_Y, Surface::Bottom),
-            (Vec2::Y, Surface::Top),
-            (Vec2::NEG_X, Surface::Left),
-            (Vec2::X, Surface::Right),
-        ]
-        .iter()
-        .map(|(offset, surface)| {
-            let offset = Vec3::new(offset.x, offset.y, 0f32);
-            let size = Vec3::new(size.x, size.y, 0f32);
-            let pos = pos + offset;
+    let pos = transform.translation.truncate();
+    let rot = 0f32;
+    let toi = 2f32;
+    let filter = QueryFilter::default().exclude_collider(player);
 
-            (
-                Aabb::from_min_max(pos - size / 2f32, pos + size / 2f32),
-                *surface,
-            )
-        })
-        .collect();
+    [
+        (Vec2::Y, Surface::Top),
+        (Vec2::NEG_Y, Surface::Bottom),
+        (Vec2::X, Surface::Right),
+        (Vec2::NEG_X, Surface::Left),
+    ]
+    .iter()
+    .for_each(|(offset, surface)| {
+        let size = controller.size / 2f32 - Vec2::new(offset.y, offset.x).abs() * 5f32;
 
-        for (shape, surface) in shapes.iter() {
-            let mut colliding = false;
-            ctx.colliders_with_aabb_intersecting_aabb(*shape, |entity| {
-                if ground_query.contains(entity) {
-                    colliding = true;
-                    return false;
-                }
-                true
-            });
-
-            controller.surface_checker.set_surface(surface, colliding)
-        }
-    }
+        let pos = pos + size * *offset;
+        let col = Collider::cuboid(size.x, size.y);
+        controller.surface_checker.set_surface(
+            surface,
+            ctx.cast_shape(pos, rot, *offset, &col, toi, filter)
+                .is_some_and(|e| ground_query.contains(e.0)),
+        );
+    });
 }
