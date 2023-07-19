@@ -13,17 +13,21 @@ pub(super) struct MovementSubComponentsPlugin;
 
 impl Plugin for MovementSubComponentsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(
+        app.add_systems(
+            Startup,
             add_debug_sprites
                 .in_set(PlayerStartupSet::PostPlayer)
                 .run_if(debug_surface_checker_enabled),
         )
-        .add_system(
-            debug_surface_checker
-                .in_set(PlayerSet::Visuals)
-                .run_if(debug_surface_checker_enabled),
+        .add_systems(
+            Update,
+            (
+                debug_surface_checker
+                    .in_set(PlayerSet::Visuals)
+                    .run_if(debug_surface_checker_enabled),
+                surface_checker.in_set(PlayerSet::PrePlayer),
+            ),
         )
-        .add_system(surface_checker.in_set(PlayerSet::PrePlayer))
         .register_type::<Surface>()
         .register_type::<SurfaceGroundedChecker>();
     }
@@ -124,7 +128,7 @@ fn debug_surface_checker(
     }
 }
 
-#[derive(Clone, Debug, Reflect, FromReflect)]
+#[derive(Clone, Debug, Reflect)]
 pub struct SurfaceGroundedChecker {
     touching_surfaces: HashMap<Surface, bool>,
 }
@@ -151,7 +155,7 @@ impl Default for SurfaceGroundedChecker {
     }
 }
 
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Reflect, FromReflect)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Reflect)]
 pub enum Surface {
     Top,
     Bottom,

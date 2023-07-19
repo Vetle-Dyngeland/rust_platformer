@@ -1,13 +1,13 @@
 use super::{Player, PlayerStartupSet};
-use bevy::prelude::*;
+use bevy::{prelude::*, reflect::TypePath};
 use leafwing_input_manager::{prelude::*, axislike::VirtualAxis};
 
 pub(super) struct PlayerInputPlugin;
 
 impl Plugin for PlayerInputPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(InputManagerPlugin::<InputAction>::default())
-            .add_startup_system(init.in_set(PlayerStartupSet::Input));
+        app.add_plugins(InputManagerPlugin::<InputAction>::default())
+            .add_systems(Startup, init.in_set(PlayerStartupSet::Input));
     }
 }
 
@@ -22,7 +22,7 @@ pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
         });
 }
 
-#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, TypePath)]
 pub enum InputAction {
     Run,
     Jump,

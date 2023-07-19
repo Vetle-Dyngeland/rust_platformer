@@ -2,7 +2,6 @@
 // the module was private
 
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::Velocity;
 use leafwing_input_manager::prelude::*;
 use seldom_state::prelude::*;
 use std::any::type_name;
@@ -20,10 +19,7 @@ impl BoolTrigger for JumpTrigger {
 
     fn trigger(&self, _: Entity, param: Self::Param<'_, '_>) -> bool {
         match param.get_single() {
-            Ok(val) => {
-                !val.coyote_timer.finished()
-                    && !val.jump_buffer_timer.finished()
-            }
+            Ok(val) => !val.coyote_timer.finished() && !val.jump_buffer_timer.finished(),
             Err(message) => {
                 println!(
                     "Could not get controller and velocity in jump trigger. Error message: {}",

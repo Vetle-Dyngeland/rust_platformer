@@ -10,7 +10,7 @@ pub(super) struct PlayerStateMachinePlugin;
 
 impl Plugin for PlayerStateMachinePlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(init.in_set(PlayerStartupSet::StateMachine));
+        app.add_systems(Startup, init.in_set(PlayerStartupSet::StateMachine));
     }
 }
 

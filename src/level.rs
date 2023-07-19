@@ -5,7 +5,7 @@ pub(super) struct LevelPlugin;
 
 impl Plugin for LevelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(init);
+        app.add_systems(Startup, init);
     }
 }
 
