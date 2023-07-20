@@ -18,9 +18,7 @@ impl Plugin for PlayerMovementPlugin {
             .add_systems(
                 Update,
                 (controller_jump_variables, jump, fall, horizontal_movement)
-                    // NOTE: put horizontal_movement last
                     .in_set(PlayerSet::Movement)
-                    .chain(),
             )
             .add_systems(Update, respawn.run_if(should_respawn))
             .add_plugins(sub_components::MovementSubComponentsPlugin)
@@ -81,6 +79,7 @@ fn init(mut cmd: Commands, player_query: Query<(Entity, &Sprite), With<Player>>)
             turnaround_multi: 1.5f32,
 
             air_control: 0.4f32,
+            grounded_delay: 0.1f32,
         }
         .build(),
     ));
@@ -101,6 +100,7 @@ pub struct CharacterControllerBuilder {
     pub turnaround_multi: f32,
 
     pub air_control: f32,
+    pub grounded_delay: f32,
 }
 
 impl CharacterControllerBuilder {
@@ -124,6 +124,7 @@ impl CharacterControllerBuilder {
             turnaround_multi: self.turnaround_multi,
 
             air_control: self.air_control,
+            grounded_delay: self.grounded_delay,
 
             surface_checker: SurfaceGroundedChecker::default(),
         }
@@ -145,6 +146,7 @@ pub struct CharacterController {
     pub turnaround_multi: f32,
 
     pub air_control: f32,
+    pub grounded_delay: f32,
 
     pub surface_checker: SurfaceGroundedChecker,
     pub size: Vec2,
@@ -267,6 +269,7 @@ fn jump(
         ),
         With<Player>,
     >,
+    mut grounded_delay_event: EventWriter<ActivateGroundedDelay>,
 ) {
     let (force_multi, mut vel, mut controller) = match player_query.single_mut() {
         (Some(state), v, c) => (state.0, v, c),
@@ -285,4 +288,6 @@ fn jump(
     if vel.linvel.x.abs() > 0f32 {
         vel.linvel.x *= 1.1f32
     }
+
+    grounded_delay_event.send(ActivateGroundedDelay(Surface::Bottom));
 }
