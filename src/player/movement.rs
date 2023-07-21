@@ -1,8 +1,6 @@
 use std::time::Duration;
 
-use super::input::InputAction;
-use super::state_machine::states::*;
-use super::{Player, PlayerSet, PlayerStartupSet};
+use super::{input::InputAction, state_machine::states::*, Player, PlayerSet, PlayerStartupSet};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
@@ -18,7 +16,8 @@ impl Plugin for PlayerMovementPlugin {
             .add_systems(
                 Update,
                 (controller_jump_variables, jump, fall, horizontal_movement)
-                    .in_set(PlayerSet::Movement)
+                    .chain()
+                    .in_set(PlayerSet::Movement),
             )
             .add_systems(Update, respawn.run_if(should_respawn))
             .add_plugins(sub_components::MovementSubComponentsPlugin)
@@ -79,7 +78,6 @@ fn init(mut cmd: Commands, player_query: Query<(Entity, &Sprite), With<Player>>)
             turnaround_multi: 1.5f32,
 
             air_control: 0.4f32,
-            grounded_delay: 0.2f32,
         }
         .build(),
     ));
@@ -100,7 +98,6 @@ pub struct CharacterControllerBuilder {
     pub turnaround_multi: f32,
 
     pub air_control: f32,
-    pub grounded_delay: f32,
 }
 
 impl CharacterControllerBuilder {
@@ -124,7 +121,6 @@ impl CharacterControllerBuilder {
             turnaround_multi: self.turnaround_multi,
 
             air_control: self.air_control,
-            grounded_delay: self.grounded_delay,
 
             surface_checker: SurfaceGroundedChecker::default(),
         }
@@ -146,7 +142,6 @@ pub struct CharacterController {
     pub turnaround_multi: f32,
 
     pub air_control: f32,
-    pub grounded_delay: f32,
 
     pub surface_checker: SurfaceGroundedChecker,
     pub size: Vec2,
@@ -224,6 +219,7 @@ fn controller_jump_variables(
     controller
         .coyote_timer
         .tick(Duration::from_secs_f32(time.delta_seconds()));
+
     if input.just_pressed(InputAction::Jump) {
         controller.jump_buffer_timer.unpause();
         controller.jump_buffer_timer.reset();

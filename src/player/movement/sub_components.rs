@@ -3,15 +3,11 @@ use bevy_rapier2d::prelude::*;
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
+    debug,
     level::Ground,
-    player::{movement::CharacterController, Player, PlayerSet, PlayerStartupSet},
+    player::{movement::CharacterController, Player, PlayerStartupSet},
+    DEBUG,
 };
-
-const DEBUG: bool = true;
-
-const fn debug() -> bool {
-    DEBUG
-}
 
 pub(super) struct MovementSubComponentsPlugin;
 
@@ -22,13 +18,8 @@ impl Plugin for MovementSubComponentsPlugin {
             spawn_grounded_checkers.after(PlayerStartupSet::Movement),
         )
         .add_systems(
-            Last,
-            (
-                surface_checker.in_set(PlayerSet::PrePlayer),
-                debug_surface_checker
-                    .in_set(PlayerSet::Visuals)
-                    .run_if(debug),
-            ),
+            PreUpdate,
+            (surface_checker, debug_surface_checker.run_if(debug)).chain(),
         )
         .add_event::<ActivateGroundedDelay>()
         .register_type::<Surface>()
@@ -41,7 +32,7 @@ fn spawn_grounded_checkers(
     player_query: Query<(Entity, &CharacterController), With<Player>>,
 ) {
     let (entity, controller) = player_query.single();
-    let size_div = 1.4f32;
+    let size_div = 2f32;
 
     let mut generate_child = |surface: Surface| -> Entity {
         let size = match surface {
@@ -153,50 +144,13 @@ pub enum Surface {
     Right,
 }
 
-fn update_last_delay_message(
-    last_delay_message: &mut Local<HashMap<Surface, f32>>,
-    surfaces: Vec<Surface>,
-    delta_seconds: f32,
-    mut events: EventReader<ActivateGroundedDelay>,
-) {
-    if last_delay_message.is_empty() {
-        **last_delay_message = HashMap::new();
-        for surface in surfaces.iter() {
-            last_delay_message.insert(*surface, 0f32);
-        }
-    }
-    for sur in last_delay_message.clone().keys() {
-        let val = *last_delay_message.get(sur).unwrap() + delta_seconds;
-        last_delay_message.insert(*sur, val);
-    }
-
-    for ev in events.iter() {
-        last_delay_message.insert(ev.0, 0f32);
-    }
-}
-
 fn surface_checker(
-    mut last_delay_message: Local<HashMap<Surface, f32>>,
     mut player_query: Query<(Entity, &mut CharacterController), With<Player>>,
-    checker_query: Query<(Entity, &Collider, &GlobalTransform, &SurfaceChecker)>,
+    checker_query: Query<(&Collider, &GlobalTransform, &SurfaceChecker)>,
     ground_query: Query<Entity, (With<Ground>, With<Collider>)>,
     ctx: Res<RapierContext>,
-    time: Res<Time>,
-    grounded_delay: EventReader<ActivateGroundedDelay>,
 ) {
     let (player, mut controller) = player_query.single_mut();
-
-    update_last_delay_message(
-        &mut last_delay_message,
-        controller
-            .surface_checker
-            .touching_surfaces
-            .keys()
-            .map(|k| *k)
-            .collect::<Vec<Surface>>(),
-        time.delta_seconds(),
-        grounded_delay,
-    );
 
     let ground_query_predicate = |e| ground_query.contains(e);
 
@@ -207,22 +161,15 @@ fn surface_checker(
 
     for (col, pos, surface) in checker_query
         .iter()
-        .map(|(_, c, t, s)| (c, t.translation().truncate(), s.0))
+        .map(|(c, t, s)| (c, t.translation().truncate(), s.0))
         .collect::<Vec<(&Collider, Vec2, Surface)>>()
         .iter()
     {
-        let is_collision_valid = *last_delay_message
-            .get(surface)
-            .expect("last delay message local does not include {surface:?}")
-            > controller.grounded_delay;
-
-        let colliding = ctx
-            .intersection_with_shape(*pos, 0f32, col, filter)
-            .is_some();
-
-        controller
-            .surface_checker
-            .set_surface(surface, colliding && is_collision_valid)
+        controller.surface_checker.set_surface(
+            surface,
+            ctx.intersection_with_shape(*pos, 0f32, col, filter)
+                .is_some(),
+        );
     }
 }
 

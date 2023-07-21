@@ -1,14 +1,16 @@
-use bevy::{
-    app::PluginGroupBuilder,
-    prelude::*,
-    window::WindowMode,
-};
+use bevy::{app::PluginGroupBuilder, prelude::*, window::WindowMode};
 use bevy_rapier2d::prelude::*;
 use seldom_state::StateMachinePlugin;
 
 pub mod exit;
 pub mod level;
 pub mod player;
+
+pub const DEBUG: bool = true;
+
+pub const fn debug() -> bool {
+    DEBUG
+}
 
 struct GamePlugins;
 
