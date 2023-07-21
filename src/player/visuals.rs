@@ -12,7 +12,7 @@ impl Plugin for PlayerVisualsPlugin {
 pub fn init(mut cmd: Commands, player_query: Query<Entity, With<Player>>) {
     cmd.entity(player_query.single()).insert((
         Sprite {
-            custom_size: Some((25f32, 25f32).into()),
+            custom_size: Some((25f32, 50f32).into()),
             color: Color::rgb_u8(125, 205, 255),
             ..Default::default()
         },
