@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::texture::DEFAULT_IMAGE_HANDLE};
 use bevy_rapier2d::prelude::*;
 use std::{collections::HashMap, hash::Hash};
 
@@ -7,25 +7,27 @@ use crate::{
     player::{movement::CharacterController, Player, PlayerSet, PlayerStartupSet},
 };
 
-const DEBUG_SURFACE_CHECKER_ENABLED: bool = true;
+const DEBUG: bool = true;
+
+const fn debug() -> bool {
+    DEBUG
+}
 
 pub(super) struct MovementSubComponentsPlugin;
 
 impl Plugin for MovementSubComponentsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            Startup,
-            add_debug_sprites
-                .in_set(PlayerStartupSet::PostPlayer)
-                .run_if(debug_surface_checker_enabled),
+            PostStartup,
+            spawn_grounded_checkers.after(PlayerStartupSet::Movement),
         )
         .add_systems(
             Last,
             (
+                surface_checker.in_set(PlayerSet::PrePlayer),
                 debug_surface_checker
                     .in_set(PlayerSet::Visuals)
-                    .run_if(debug_surface_checker_enabled),
-                surface_checker.in_set(PlayerSet::PrePlayer),
+                    .run_if(debug),
             ),
         )
         .add_event::<ActivateGroundedDelay>()
@@ -34,55 +36,50 @@ impl Plugin for MovementSubComponentsPlugin {
     }
 }
 
-const fn debug_surface_checker_enabled() -> bool {
-    DEBUG_SURFACE_CHECKER_ENABLED
-}
-
-fn add_debug_sprites(
+fn spawn_grounded_checkers(
     mut cmd: Commands,
     player_query: Query<(Entity, &CharacterController), With<Player>>,
 ) {
-    let (entity, controller) = match player_query.get_single() {
-        Ok((e, c)) => (e, c),
-        Err(err) => {
-            println!(
-                "\n\n\nCould not get player entity. Error provided: {}",
-                err.to_string()
-            );
-            return;
-        }
-    };
+    let (entity, controller) = player_query.single();
+    let size_div = 1.4f32;
 
     let mut generate_child = |surface: Surface| -> Entity {
-        cmd.spawn((
-            SpriteBundle {
-                sprite: Sprite {
-                    custom_size: Some(match surface {
-                        Surface::Top | Surface::Bottom => {
-                            Vec2::new(controller.size.x / 1.1f32, 2.5f32)
-                        }
-                        Surface::Left | Surface::Right => {
-                            Vec2::new(2.5f32, controller.size.y / 1.1f32)
-                        }
-                    }),
+        let size = match surface {
+            Surface::Top | Surface::Bottom => Vec2::new(controller.size.x / size_div, 1f32),
+            Surface::Left | Surface::Right => Vec2::new(1f32, controller.size.y / size_div),
+        };
+        let child = cmd
+            .spawn((
+                SpatialBundle {
+                    transform: Transform::from_translation(
+                        match surface {
+                            Surface::Top => Vec3::Y * controller.size.y / 2f32,
+                            Surface::Bottom => Vec3::NEG_Y * controller.size.y / 2f32,
+                            Surface::Right => Vec3::X * controller.size.x / 2f32,
+                            Surface::Left => Vec3::NEG_X * controller.size.x / 2f32,
+                        } + Vec3::Z * 5f32,
+                    ),
+                    ..Default::default()
+                },
+                Collider::cuboid(size.x / 2f32, size.y / 2f32),
+                Sensor,
+                SurfaceChecker(surface),
+                Name::from(format!("{surface:?} checker")),
+            ))
+            .id();
+
+        if DEBUG {
+            cmd.entity(child).insert((
+                Sprite {
+                    custom_size: Some(size * size_div * 0.9f32),
                     color: Color::WHITE,
                     ..Default::default()
                 },
-                transform: Transform {
-                    translation: match surface {
-                        Surface::Top => Vec3::Y * controller.size.y / 2f32,
-                        Surface::Bottom => Vec3::NEG_Y * controller.size.y / 2f32,
-                        Surface::Right => Vec3::X * controller.size.x / 2f32,
-                        Surface::Left => Vec3::NEG_X * controller.size.x / 2f32,
-                    } + Vec3::Z * 5f32,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            DebugSurfaceChecker(surface),
-            Name::from(format!("{surface:?}")),
-        ))
-        .id()
+                DEFAULT_IMAGE_HANDLE.typed::<Image>(),
+            ));
+        }
+
+        child
     };
 
     let children = [
@@ -96,36 +93,28 @@ fn add_debug_sprites(
 }
 
 #[derive(Component)]
-struct DebugSurfaceChecker(Surface);
+struct SurfaceChecker(Surface);
 
 fn debug_surface_checker(
     controller_query: Query<&CharacterController, With<Player>>,
-    mut debug_query: Query<(&mut Sprite, &DebugSurfaceChecker)>,
+    mut debug_query: Query<(&mut Sprite, &SurfaceChecker)>,
 ) {
-    let surface_checker = match controller_query.get_single() {
-        Ok(controller) => &controller.surface_checker,
-        Err(err) => {
-            println!(
-                "Could not get CharacterController, message: {}",
-                err.to_string()
-            );
-            return;
-        }
-    };
+    let controller = controller_query.single();
 
     for (mut sprite, surface) in debug_query.iter_mut() {
-        let color = match surface_checker.touching_surfaces.get(&surface.0) {
-            Some(s) => match s {
-                &true => Color::LIME_GREEN,
-                _ => Color::RED,
-            },
-            None => {
-                println!("Surface checker did not contain surface: {:?}", surface.0);
-                return;
-            }
-        };
+        let touching = *controller
+            .surface_checker
+            .touching_surfaces
+            .get(&surface.0)
+            .expect(&format!(
+                "Surface checker did not include surface {:?}",
+                surface.0
+            ));
 
-        sprite.color = color;
+        sprite.color = match touching {
+            true => Color::LIME_GREEN,
+            false => Color::RED,
+        };
     }
 }
 
@@ -187,19 +176,20 @@ fn update_last_delay_message(
 }
 
 fn surface_checker(
-    mut grounded_checker_query: Query<(Entity, &mut CharacterController, &Transform), With<Player>>,
-    ground_query: Query<Entity, (With<Ground>, With<Collider>)>,
     mut last_delay_message: Local<HashMap<Surface, f32>>,
+    mut player_query: Query<(Entity, &mut CharacterController), With<Player>>,
+    checker_query: Query<(Entity, &Collider, &GlobalTransform, &SurfaceChecker)>,
+    ground_query: Query<Entity, (With<Ground>, With<Collider>)>,
     ctx: Res<RapierContext>,
     time: Res<Time>,
     grounded_delay: EventReader<ActivateGroundedDelay>,
 ) {
-    let (player, mut controller, transform) = grounded_checker_query.single_mut();
-    let mut checker = controller.surface_checker.clone(); // Shorthand
+    let (player, mut controller) = player_query.single_mut();
 
     update_last_delay_message(
         &mut last_delay_message,
-        checker
+        controller
+            .surface_checker
             .touching_surfaces
             .keys()
             .map(|k| *k)
@@ -208,36 +198,32 @@ fn surface_checker(
         grounded_delay,
     );
 
-    let pos = transform.translation.truncate();
-    let rot = 0f32;
-    let toi = 1f32;
-    let filter = QueryFilter::default().exclude_collider(player);
+    let ground_query_predicate = |e| ground_query.contains(e);
 
-    [
-        (Vec2::Y, Surface::Top),
-        (Vec2::NEG_Y, Surface::Bottom),
-        (Vec2::X, Surface::Right),
-        (Vec2::NEG_X, Surface::Left),
-    ]
-    .iter()
-    .for_each(|(offset, surface)| {
-        if *last_delay_message.get(surface).unwrap() < controller.grounded_delay {
-            checker.set_surface(surface, false);
-            return;
-        }
+    let filter = QueryFilter::new()
+        .exclude_sensors()
+        .exclude_rigid_body(player)
+        .predicate(&ground_query_predicate);
 
-        let size = controller.size / 2f32 - Vec2::new(offset.y, offset.x).abs() * 5f32;
+    for (col, pos, surface) in checker_query
+        .iter()
+        .map(|(_, c, t, s)| (c, t.translation().truncate(), s.0))
+        .collect::<Vec<(&Collider, Vec2, Surface)>>()
+        .iter()
+    {
+        let is_collision_valid = *last_delay_message
+            .get(surface)
+            .expect("last delay message local does not include {surface:?}")
+            > controller.grounded_delay;
 
-        let pos = pos + size * *offset;
-        let col = Collider::cuboid(size.x, size.y);
-        checker.set_surface(
-            surface,
-            ctx.cast_shape(pos, rot, *offset, &col, toi, filter)
-                .is_some_and(|e| ground_query.contains(e.0)),
-        );
-    });
+        let colliding = ctx
+            .intersection_with_shape(*pos, 0f32, col, filter)
+            .is_some();
 
-    controller.surface_checker = checker;
+        controller
+            .surface_checker
+            .set_surface(surface, colliding && is_collision_valid)
+    }
 }
 
 #[derive(Event, Clone, Copy, PartialEq, Eq, Reflect)]

@@ -79,7 +79,7 @@ fn init(mut cmd: Commands, player_query: Query<(Entity, &Sprite), With<Player>>)
             turnaround_multi: 1.5f32,
 
             air_control: 0.4f32,
-            grounded_delay: 0.1f32,
+            grounded_delay: 0.2f32,
         }
         .build(),
     ));
